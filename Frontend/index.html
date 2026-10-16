@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f6f5f1">
+    <meta name="description" content="Thoughtful objects for a more considered everyday. Discover modern home, desk, and lifestyle essentials at Atelier.">
+    <title>Atelier — Objects for everyday</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+    <script defer src="/vendor/chart/chart.umd.js"></script>
+    <script defer src="/js/app.js"></script>
+  </head>
+  <body>
+    <div class="announcement"><span>Complimentary shipping on orders over $100</span><span class="announcement-mark">✳</span><span>Designed for your everyday</span></div>
+    <header class="site-header" id="site-header">
+      <a class="brand" href="#/" aria-label="Atelier home"><span class="brand-mark">a.</span><span>atelier</span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="#/" data-nav="shop">Shop</a>
+        <a href="#/" data-scroll="featured">Featured</a>
+        <a href="#/" data-scroll="about">Our story</a>
+      </nav>
+      <div class="header-actions">
+        <button class="icon-button search-toggle" data-action="focus-search" aria-label="Search products"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.7"/><path d="m16 16 4.2 4.2"/></svg></button>
+        <button class="icon-button account-button" data-action="account" aria-label="Account"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.2 20c.7-3.1 3.3-5 6.8-5s6.1 1.9 6.8 5"/></svg></button>
+        <button class="cart-button" data-action="cart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 12H5.2L4 8Z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/></svg><span>Bag</span><span class="cart-count" id="cart-count">0</span></button>
+      </div>
+    </header>
+    <main id="app" tabindex="-1"></main>
+    <footer class="site-footer" id="site-footer">
+      <div class="footer-top"><a class="brand footer-brand" href="#/"><span class="brand-mark">a.</span><span>atelier</span></a><p>Good things, thoughtfully made.<br>Objects for a more considered everyday.</p><a class="footer-top-link" href="#/">Back to the top <span>↗</span></a></div>
+      <div class="footer-bottom"><span>© <span id="year"></span> Atelier Studio</span><span>Made for everyday living</span><a href="#/admin">Store management</a></div>
+    </footer>
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <div id="overlay-root"></div>
+  </body>
+</html>
