@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Order = require('../models/Order');
+const StoreSetting = require('../models/StoreSetting');
 
 const money = (value) => Math.round((value + Number.EPSILON) * 100) / 100;
 
@@ -40,8 +41,9 @@ async function createOrder(req, res, next) {
       orderItems.push({ product: product._id, name: original.name, image: original.images[0], category: product.category, quantity, price: original.price });
     }
     subtotal = money(subtotal);
-    const shipping = subtotal >= Number(process.env.FREE_SHIPPING_THRESHOLD || 100) ? 0 : Number(process.env.SHIPPING_FEE || 8);
-    const tax = money(subtotal * Number(process.env.TAX_RATE || 0.08));
+    const settings = await StoreSetting.current();
+    const shipping = subtotal >= settings.freeShippingThreshold ? 0 : settings.shippingFee;
+    const tax = money(subtotal * settings.taxRate);
     const order = await Order.create({
       user: req.user._id, items: orderItems,
       shippingAddress: Object.fromEntries(addressFields.map((field) => [field, shippingAddress[field].trim()])),

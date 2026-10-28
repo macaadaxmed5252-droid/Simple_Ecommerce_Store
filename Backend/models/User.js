@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
   status: { type: String, enum: ['active', 'inactive'], default: 'active' },
   avatar: { type: String, default: '' },
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+  tokenVersion: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 

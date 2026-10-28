@@ -12,6 +12,9 @@ const authRoutes = require('./Backend/routes/authRoutes');
 const productRoutes = require('./Backend/routes/productRoutes');
 const orderRoutes = require('./Backend/routes/orderRoutes');
 const adminRoutes = require('./Backend/routes/adminRoutes');
+const userRoutes = require('./Backend/routes/userRoutes');
+const StoreSetting = require('./Backend/models/StoreSetting');
+const { portalPageGuard } = require('./Backend/middleware/auth');
 const { notFound, errorHandler } = require('./Backend/middleware/errorHandler');
 
 const app = express();
@@ -44,20 +47,23 @@ app.use('/api', (req, res, next) => {
 });
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'CodeAlpha Store API' }));
-app.get('/api/store-config', (_req, res) => res.json({ settings: {
-  taxRate: Number(process.env.TAX_RATE || 0.08),
-  shippingFee: Number(process.env.SHIPPING_FEE || 8),
-  freeShippingThreshold: Number(process.env.FREE_SHIPPING_THRESHOLD || 100)
-} }));
+app.get('/api/store-config', async (_req, res, next) => {
+  try {
+    const { storeName, taxRate, shippingFee, freeShippingThreshold } = (await StoreSetting.current()).toPublic();
+    res.json({ settings: { storeName, taxRate, shippingFee, freeShippingThreshold } });
+  } catch (error) { next(error); }
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api', (_req, res) => res.status(404).json({ message: 'API endpoint not found.' }));
 
 app.use(express.static(path.join(__dirname, 'Frontend')));
 app.use('/vendor/chart', express.static(path.join(__dirname, 'node_modules', 'chart.js', 'dist'), { index: false, maxAge: '7d' }));
 app.use('/uploads', express.static(path.join(__dirname, 'Backend', 'storage', 'uploads'), { dotfiles: 'deny', index: false, maxAge: '1d', immutable: false }));
+app.get(['/admin', '/admin/*', '/account', '/account/*', '/dashboard', '/dashboard/*'], portalPageGuard);
 app.get('*', (_req, res) => res.sendFile(path.join(__dirname, 'Frontend', 'index.html')));
 app.use(notFound);
 app.use(errorHandler);

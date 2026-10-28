@@ -1,13 +1,13 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Order = require('../models/Order');
 const { normalizeEmail } = require('../middleware/validate');
+const { portalHomeFor } = require('../middleware/auth');
 
 function issueToken(user, res) {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
     throw new Error('JWT_SECRET must contain at least 32 characters.');
   }
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
+  const token = jwt.sign({ id: user._id, v: user.tokenVersion || 0 }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
   res.cookie('storeToken', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -17,8 +17,12 @@ function issueToken(user, res) {
 }
 
 function safeUser(user) {
-  return { id: user._id, name: user.name, email: user.email, role: user.role, status: user.status, avatar: user.avatar, createdAt: user.createdAt };
+  const profile = { id: user._id, name: user.name, email: user.email, role: user.role, status: user.status, avatar: user.avatar, createdAt: user.createdAt };
+  if (user.role === 'customer') profile.wishlist = (user.wishlist || []).map(String);
+  return profile;
 }
+
+const clearCookieOptions = () => ({ httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
 
 function validPassword(password) {
   return typeof password === 'string' && password.length >= 8 && Buffer.byteLength(password, 'utf8') <= 72 && /[A-Z]/.test(password)
@@ -33,7 +37,7 @@ async function register(req, res, next) {
     if (!validPassword(password)) return res.status(400).json({ message: 'Use 8–72 UTF-8 bytes with uppercase, lowercase, a number, and one of @$!%*#?&.' });
     const user = await User.create({ name: name.trim(), email: email.trim().toLowerCase(), password });
     issueToken(user, res);
-    res.status(201).json({ user: safeUser(user) });
+    res.status(201).json({ user: safeUser(user), redirectTo: portalHomeFor(user.role) });
   } catch (error) { next(error); }
 }
 
@@ -45,17 +49,25 @@ async function login(req, res, next) {
     if (!user || !(await user.comparePassword(password))) return res.status(401).json({ message: 'Email or password is incorrect.' });
     if (user.status !== 'active') return res.status(403).json({ message: 'This account has been deactivated. Contact the store team for help.' });
     issueToken(user, res);
-    res.json({ user: safeUser(user) });
+    res.json({ user: safeUser(user), redirectTo: portalHomeFor(user.role) });
   } catch (error) { next(error); }
 }
 
 function logout(_req, res) {
-  res.clearCookie('storeToken', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
+  res.clearCookie('storeToken', clearCookieOptions());
   res.json({ message: 'You are signed out.' });
 }
 
+async function logoutAll(req, res, next) {
+  try {
+    await User.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
+    res.clearCookie('storeToken', clearCookieOptions());
+    res.json({ message: 'You are signed out on every device.' });
+  } catch (error) { next(error); }
+}
+
 async function me(req, res) {
-  res.json({ user: safeUser(req.user) });
+  res.json({ user: safeUser(req.user), redirectTo: portalHomeFor(req.user.role) });
 }
 
 async function updateMe(req, res, next) {
@@ -95,11 +107,5 @@ async function updateAvatar(req, res, next) {
   } catch (error) { next(error); }
 }
 
-async function myOrders(req, res, next) {
-  try {
-    const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
-    res.json({ orders });
-  } catch (error) { next(error); }
-}
 
-module.exports = { register, login, logout, me, updateMe, updateAvatar, myOrders };
+module.exports = { register, login, logout, logoutAll, me, updateMe, updateAvatar };

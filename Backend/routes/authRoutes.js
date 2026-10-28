@@ -10,9 +10,9 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHea
 router.post('/register', authLimiter, controller.register);
 router.post('/login', authLimiter, controller.login);
 router.post('/logout', controller.logout);
+router.post('/logout-all', protect, controller.logoutAll);
 router.get('/me', protect, controller.me);
 router.patch('/me', protect, controller.updateMe);
 router.post('/me/avatar', protect, avatarUpload, controller.updateAvatar);
-router.get('/me/orders', protect, controller.myOrders);
 
 module.exports = router;

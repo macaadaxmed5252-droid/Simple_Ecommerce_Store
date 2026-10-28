@@ -24,13 +24,14 @@ Atelier is a full-stack e-commerce application created for the CodeAlpha Task 1 
 - Product detail pages with image gallery, stock availability, ratings, and customer reviews.
 - Persistent local-storage shopping bag with quantity controls and live subtotal, estimated tax, and shipping.
 - Multi-step shipping and mock payment checkout, with inventory checks and order confirmation.
-- Dedicated customer portal layouts at `/account`, `/dashboard`, and `/orders`, with profile information and order history.
+- Customer portal at `#/account/overview` with Overview (orders placed, total spent, active shipping), My orders & receipts, Wishlist, and Profile settings. Legacy `/account`, `/dashboard`, and `/orders` URLs redirect here.
 
 ### Store management
 
-- Role-based access for customers and admins.
-- Admin overview with product, order, customer, and paid revenue totals.
-- Monthly revenue / order analytics, category sales distribution, and customer access management.
+- Strict role isolation: on sign-in, admins land on `#/admin/dashboard` and customers on `#/account/overview`. Each portal rejects the other role, in the browser router, through a server-side page guard for direct `/admin` and `/account` URLs, and in the API (`requireAdmin` / `requireCustomer`).
+- Admin portal with five sections: Overview, Product management, Order fulfillment, Users & customers, and Store settings & profile.
+- Overview metric cards (total revenue, total orders, registered customers, low-stock alerts) and three Chart.js charts: monthly revenue trend, top-selling categories, and order status distribution.
+- Editable store configuration (store name, support email, tax rate, shipping fee, free-shipping threshold, low-stock threshold) and "sign out of all devices".
 - Create, edit, and delete products; review stock levels.
 - View placed orders, assign tracking references, and update status: pending, processing, shipped, delivered, or cancelled.
 - Customer profile photo uploads validate JPEG, PNG, or WebP signatures and a 2 MB limit before being served from the uploads directory.
@@ -61,9 +62,10 @@ CodeAlpha_Simple_Ecommerce_Store/
 │   │   ├── adminController.js
 │   │   ├── authController.js
 │   │   ├── orderController.js
-│   │   └── productController.js
+│   │   ├── productController.js
+│   │   └── userController.js     # Customer portal: overview, orders, wishlist
 │   ├── middleware/
-│   │   ├── auth.js               # JWT and role checks
+│   │   ├── auth.js               # JWT sessions, requireAdmin/requireCustomer, portal page guard
 │   │   ├── avatarUpload.js       # File size and media-type gate
 │   │   ├── errorHandler.js
 │   │   ├── sanitizeInput.js      # HTML sanitization for request bodies
@@ -71,12 +73,14 @@ CodeAlpha_Simple_Ecommerce_Store/
 │   ├── models/
 │   │   ├── Order.js
 │   │   ├── Product.js
+│   │   ├── StoreSetting.js       # Editable store configuration (env values are defaults)
 │   │   └── User.js
 │   ├── routes/
 │   │   ├── adminRoutes.js
 │   │   ├── authRoutes.js
 │   │   ├── orderRoutes.js
-│   │   └── productRoutes.js
+│   │   ├── productRoutes.js
+│   │   └── userRoutes.js         # Customer-only API
 │   ├── storage/uploads/          # Created when profile images are uploaded
 │   └── seed.js                   # Idempotent product/admin seed script
 ├── Frontend/
@@ -163,9 +167,13 @@ All routes are prefixed with `/api`. “Authenticated” means a valid JWT sessi
 | `POST` | `/api/auth/register` | Create a customer account | Public |
 | `POST` | `/api/auth/login` | Sign in and issue session cookie | Public |
 | `POST` | `/api/auth/logout` | Clear the session cookie | Public |
+| `POST` | `/api/auth/logout-all` | Revoke every session for the account | Authenticated |
 | `GET` | `/api/auth/me` | Get current account | Authenticated |
 | `PATCH` | `/api/auth/me` | Update name or email | Authenticated |
-| `GET` | `/api/auth/me/orders` | Get current user’s order history | Authenticated |
+| `GET` | `/api/users/me/overview` | Customer overview stats and recent orders | Customer |
+| `GET` | `/api/users/me/orders` | Customer order history | Customer |
+| `GET` | `/api/users/me/wishlist` | Saved products | Customer |
+| `POST` / `DELETE` | `/api/users/me/wishlist/:productId` | Add or remove a saved product | Customer |
 | `GET` | `/api/products` | List, search, filter, and sort products | Public |
 | `GET` | `/api/products/categories` | List catalog categories | Public |
 | `GET` | `/api/products/:id` | Get product details and reviews | Public |
@@ -174,7 +182,8 @@ All routes are prefixed with `/api`. “Authenticated” means a valid JWT sessi
 | `GET` | `/api/orders/mine` | Get current user’s orders | Authenticated |
 | `GET` | `/api/orders/:id` | Get an order owned by the user | Authenticated / Admin |
 | `GET` | `/api/orders/:id/receipt` | Download an order receipt | Authenticated / Admin |
-| `GET` | `/api/admin/overview` | Get store summary metrics | Admin |
+| `GET` | `/api/admin/overview` | Store metrics, chart data, low-stock and recent orders | Admin |
+| `GET` | `/api/admin/products` | List all products with the low-stock threshold | Admin |
 | `POST` | `/api/admin/products` | Create a product | Admin |
 | `PATCH` | `/api/admin/products/:id` | Update a product | Admin |
 | `DELETE` | `/api/admin/products/:id` | Delete a product | Admin |
@@ -182,6 +191,7 @@ All routes are prefixed with `/api`. “Authenticated” means a valid JWT sessi
 | `PATCH` | `/api/admin/orders/:id/status` | Update order fulfillment status | Admin |
 | `GET` | `/api/admin/users` | List accounts with order count and lifetime spend | Admin |
 | `PATCH` | `/api/admin/users/:id` | Change account role or active status | Admin |
+| `GET` / `PATCH` | `/api/admin/settings` | Read or update store configuration | Admin |
 | `POST` | `/api/auth/me/avatar` | Upload the authenticated user’s profile image (`multipart/form-data`) | Authenticated |
 
 The checkout endpoint accepts product IDs and quantities plus a shipping address. It derives current product prices and totals on the server, decrements inventory with stock guards, and marks the mock payment as complete. No card information is accepted or stored.
